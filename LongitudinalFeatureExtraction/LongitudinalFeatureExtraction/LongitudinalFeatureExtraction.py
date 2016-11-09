@@ -113,7 +113,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # transform selector
     #
     self.transform2Selector = slicer.qMRMLNodeComboBox()
-    self.transform2Selector.nodeTypes = ["vtkMRMLTransformNode"]
+    self.transform2Selector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
     self.transform2Selector.selectNodeUponCreation = True
     self.transform2Selector.addEnabled = False
     self.transform2Selector.removeEnabled = False
@@ -153,7 +153,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # transform selector
     #
     self.transform3Selector = slicer.qMRMLNodeComboBox()
-    self.transform3Selector.nodeTypes = ["vtkMRMLTransformNode"]
+    self.transform3Selector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
     self.transform3Selector.selectNodeUponCreation = True
     self.transform3Selector.addEnabled = False
     self.transform3Selector.removeEnabled = False
@@ -193,7 +193,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # transform selector
     #
     self.transform4Selector = slicer.qMRMLNodeComboBox()
-    self.transform4Selector.nodeTypes = ["vtkMRMLTransformNode"]
+    self.transform4Selector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
     self.transform4Selector.selectNodeUponCreation = True
     self.transform4Selector.addEnabled = False
     self.transform4Selector.removeEnabled = False
@@ -225,15 +225,15 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     pass
 
   def onSelect(self):
-    self.applyButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode() and self.image3Selector.currentNode() and self.transform3Selector.currentNode() and self.image4Selector.currentNode() and self.transform4Selector.currentNode()
+    self.applyButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode()
 
   def onApplyButton(self):
     logic = LongitudinalFeatureExtractionLogic()
-	# gather images into list
-	images = [self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
-	# gather transforms into list
-	transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
-	# send to logic
+    # gather images into list
+    images = [self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
+    # gather transforms into list
+    transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
+    # send to logic
     logic.run(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
 
 #
@@ -263,72 +263,84 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
       return False
     return True
     
+  def printStatus(self, node, event):
+    status = node.GetStatusString()
+    print('    Apply transform ' + status)
+    return status
+    
   def applyTransform(self, image, roi, transform):
     # create new volumes
-	roiNew = slicer.vtkMRMLLabelMapVolumeNode()
-	roiNew.SetName( image.GetID + '-label')
-	slicer.mrmlScene.AddNode( roiNew )
-	
-	# take inverse of transform
-	inverseTransform = slicer.vtkMRMLTransformNode()
-	inverseTransform.SetAndObserveMatrixTransformToParent( transform.GetMatrixTransformFromParent() )
-	
-	# resample roi using inverse transform
-	parameters = {}
-	parameters['inputVolume'] = roi
-	parameters['referenceVolume'] = image
-	parameters['outputVolume'] = roiNew
-	parameters['pixelType'] = 'Int'
-	parameters['warpTransform'] = inverseTransform
-	parameters['interpolationMode'] = 'Linear'
-	# call module
-	resampler = slicer.modules.brainsresample
-	slicer.cli.run( resampler, None, parameters )
+    roiNew = slicer.vtkMRMLLabelMapVolumeNode()
+    roiNew.SetName( image.GetName() + '-label')
+    slicer.mrmlScene.AddNode( roiNew )
     
-    return
+    # take inverse of transform
+    # convert transform to grid transform
+    transformLogic = slicer.modules.transforms.logic
     
-  def getLabelStats(self, volume, labelmap):
+    # resample roi using inverse transform
+    parameters = {}
+    parameters["inputVolume"] = roi
+    parameters["referenceVolume"] = image
+    parameters["outputVolume"] = roiNew
+    parameters["pixelType"] = "int"
+    parameters["warpTransform"] = transform
+    parameters["interpolationMode"] = "Linear"
+    # call module
+    cliNode = None
+    cliNode = slicer.cli.run( slicer.modules.brainsresample, cliNode, parameters )
+    print(cliNode.GetStatusString())
+    observerTag = cliNode.AddObserver('ModifiedEvent', self.printStatus)
+    
+    return roiNew
+    
+  def getLabelStats(self, image, roi):
     # find label value within label map
-    imStats = sitk.StatisticsImageFilter()
-    imStats.Execute( labelmap )
-    label = int(imStats.GetMaximum())
+    findLabel = sitk.StatisticsImageFilter()
+    findLabel.Execute( roi )
+    label = int(findLabel.GetMaximum())
+    
+    # find volume of voxel
+    voxelVolume = reduce(lambda x,y: x*y, image.GetSpacing())
     
     # find the image statistics within the label map
     stats = sitk.LabelStatisticsImageFilter()
-    stats.Execute(volume, labelmap)
-    individResults = [stats.GetCount(label), stats.GetMean(label), stats.GetVariance(label),stats.GetMaximum(label),stats.GetMinimum(label)]
+    stats.Execute(image, roi)
+    results = [stats.GetCount(label)*voxelVolume, stats.GetMean(label), stats.GetVariance(label),stats.GetMaximum(label),stats.GetMinimum(label)]
     
-    return individResults
+    return results
        
   def run(self, roi, baseline, images, transforms):
     # obtain statistics on vol1 with corresponding label map
-    headers = ['Count','Mean','Variance','Maximum','Minimum']
+    headers = ['Volume','Mean','Variance','Maximum','Minimum']
     results=[]
     results.append(headers)
     
     logging.info('Obtaining statistics')
     
     # pull label map from slicer
-    lm1 = sitkUtils.PullFromSlicer(labelMap.GetID())
-    vl1 = sitkUtils.PullFromSlicer(vol1.GetID())
-    results.append(self.getLabelStats(vl1,lm1))
-    
-    lm2r = None
+    roi_here = sitkUtils.PullFromSlicer(roi.GetID())
+    image_here = sitkUtils.PullFromSlicer(baseline.GetID())
+    # get statistics on baseline image
+    results.append(self.getLabelStats(image_here,roi_here))
     
     # perform actions on each image/transform pair
-	for x in xrange(0, len(images)):
-	    if( images[x] != None ):
-		    self.applyTransform( image[x], roi, transforms[x] )
+    for x in xrange(0, len(images)):
+        if( images[x] != None ):
+            # apply transforms and create new rois/image
+            roiNew = self.applyTransform( images[x], roi, transforms[x] )
+            
+            # pull volumes and rois from slicer
+            #image_here = sitkUtils.PullFromSlicer(images[x].GetID())
+            #print(roiNew.GetID())
+            #roi_here = sitkUtils.PullFromSlicer(roiNew.GetID())
+
+            # get statistics
+            #results.append(self.getLabelStats(image_here,roi_here))
     
-    # pull volume2 and label map from slicer
-    #lm2 = sitkUtils.PullFromSlicer(lm2r.GetID())
-    #vl2 = sitkUtils.PullFromSlicer(vol2.GetID())
-    
-    # apply inverse transform to image and get results
-    #lm2r = sitk.Resample(lm2, lm1, inverseTransform, sitk.sitkNearestNeighbor, lm1.GetPixelID())
-    #results.append(self.getLabelStats(vl2,lm2))
-    
-    print(results)
+    #for x in xrange(0,len(results)):
+        #print( results[x] )
+        #print('\n')
     logging.info('Processing completed')
     return True
 
