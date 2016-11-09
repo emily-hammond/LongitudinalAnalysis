@@ -263,13 +263,27 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
       return False
     return True
     
-  def invertTransform(self, transform):
-    # create new transform and set it as the inverse of the given transform
-    inverseTransform = slicer.vtkMRMLTransformNode()
-    inverseTransform.SetAndObserveMatrixTransformToParent( transform.GetMatrixTransformFromParent())
-    inverseTransform.SetName( transform.GetName() + '-inverse' )
-    # push transform to scene
-    slicer.mrmlScene.AddNode(inverseTransform)
+  def applyTransform(self, image, roi, transform):
+    # create new volumes
+	roiNew = slicer.vtkMRMLLabelMapVolumeNode()
+	roiNew.SetName( image.GetID + '-label')
+	slicer.mrmlScene.AddNode( roiNew )
+	
+	# take inverse of transform
+	inverseTransform = slicer.vtkMRMLTransformNode()
+	inverseTransform.SetAndObserveMatrixTransformToParent( transform.GetMatrixTransformFromParent() )
+	
+	# resample roi using inverse transform
+	parameters = {}
+	parameters['inputVolume'] = roi
+	parameters['referenceVolume'] = image
+	parameters['outputVolume'] = roiNew
+	parameters['pixelType'] = 'Int'
+	parameters['warpTransform'] = inverseTransform
+	parameters['interpolationMode'] = 'Linear'
+	# call module
+	resampler = slicer.modules.brainsresample
+	slicer.cli.run( resampler, None, parameters )
     
     return
     
@@ -286,19 +300,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     
     return individResults
        
-  def run(self, labelMap, vol1, vol2, transform):
-  
-    # create new transform and set it as the inverse of the given transform
-    inverseTransform = slicer.vtkMRMLLinearTransformNode()
-    inverseTransform.SetAndObserveMatrixTransformToParent( transform.GetMatrixTransformFromParent())
-    inverseTransform.SetName( transform.GetName() + '-inverse' )
-    # push transform to scene
-    slicer.mrmlScene.AddNode(inverseTransform)
-
-    # create new label map (clone volume 1 label map)
-    volumesLogic = slicer.modules.volumes.logic()
-    labelMap2 = volumesLogic.CloneVolume(labelMap, vol2.GetName() + '-label')
-    
+  def run(self, roi, baseline, images, transforms):
     # obtain statistics on vol1 with corresponding label map
     headers = ['Count','Mean','Variance','Maximum','Minimum']
     results=[]
@@ -313,23 +315,18 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     
     lm2r = None
     
-    # harden transform and resample
-    transformLogic = slicer.vtkSlicerTransformLogic()
-    labelMap2.SetAndObserveTransformNodeID(inverseTransform.GetID())
-    transformLogic.hardenTransform(labelMap2)
-    #warning = volumesLogic.CheckForLabelVolumeValidity(vol2,labelMap2)
-    lm2r = volumesLogic.ResampleVolumeToReferenceVolume( labelMap2, vol2 )
-    slicer.mrmlScene.RemoveNode(labelMap2)
-    
-    # ***************** COPY IN MUCH STUFF FROM LABELSTATISTICS.PY **********************
+    # perform actions on each image/transform pair
+	for x in xrange(0, len(images)):
+	    if( images[x] != None ):
+		    self.applyTransform( image[x], roi, transforms[x] )
     
     # pull volume2 and label map from slicer
-    lm2 = sitkUtils.PullFromSlicer(lm2r.GetID())
-    vl2 = sitkUtils.PullFromSlicer(vol2.GetID())
+    #lm2 = sitkUtils.PullFromSlicer(lm2r.GetID())
+    #vl2 = sitkUtils.PullFromSlicer(vol2.GetID())
     
     # apply inverse transform to image and get results
     #lm2r = sitk.Resample(lm2, lm1, inverseTransform, sitk.sitkNearestNeighbor, lm1.GetPixelID())
-    results.append(self.getLabelStats(vl2,lm2))
+    #results.append(self.getLabelStats(vl2,lm2))
     
     print(results)
     logging.info('Processing completed')
