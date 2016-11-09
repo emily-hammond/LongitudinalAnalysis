@@ -229,7 +229,12 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
 
   def onApplyButton(self):
     logic = LongitudinalFeatureExtractionLogic()
-    logic.run(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), self.image2Selector.currentNode(), self.transform2Selector.currentNode(), self.image3Selector.currentNode(), self.transform3Selector.currentNode(), self.image4Selector.currentNode(), self.transform4Selector.currentNode())
+	# gather images into list
+	images = [self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
+	# gather transforms into list
+	transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
+	# send to logic
+    logic.run(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
 
 #
 # LongitudinalFeatureExtractionLogic
@@ -257,7 +262,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
       logging.debug('hasImageData failed: no image data in volume node')
       return False
     return True
-	
+    
   def invertTransform(self, transform):
     # create new transform and set it as the inverse of the given transform
     inverseTransform = slicer.vtkMRMLTransformNode()
@@ -265,8 +270,8 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     inverseTransform.SetName( transform.GetName() + '-inverse' )
     # push transform to scene
     slicer.mrmlScene.AddNode(inverseTransform)
-	
-	return
+    
+    return
     
   def getLabelStats(self, volume, labelmap):
     # find label value within label map
