@@ -348,30 +348,9 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     print(cliNode.AddObserver('ModifiedEvent', self.printStatus))
     
     return roiNew
-    
-  # not used anymore
-  def getLabelStats(self, image, roi):
-    # find label value within label map
-    findLabel = sitk.StatisticsImageFilter()
-    findLabel.Execute( roi )
-    label = int(findLabel.GetMaximum())
-    
-    # find volume of voxel
-    voxelVolume = reduce(lambda x,y: x*y, image.GetSpacing())
-    
-    # find the image statistics within the label map
-    stats = sitk.LabelStatisticsImageFilter()
-    stats.Execute(image, roi)
-    results = [stats.GetCount(label)*voxelVolume, stats.GetMean(label), stats.GetVariance(label),stats.GetMaximum(label),stats.GetMinimum(label)]
-    
-    return results
-    
-  # copied/modified from labelstatistics module
-  def getLabelStats2(self, image, roi):
-    # define headers
-    keys = ("Image","Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev")
-    labelStats = {}
-    labelStats['Labels'] = []
+
+  def getLabelStats(self, image, roi, labelStats):
+    # copied/modified from labelstatistics module
     # determine volume of a voxel and conversion factor to cubed centimeters
     cubicMMPerVoxel = reduce(lambda x,y: x*y, roi.GetSpacing())
     ccPerCubicMM = 0.001
@@ -418,8 +397,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
             labelStats[i,"Max"] = stat1.GetMax()[0]
             labelStats[i,"Mean"] = stat1.GetMean()[0]
             labelStats[i,"StdDev"] = stat1.GetStandardDeviation()[0]
-    
-    print(labelStats)
+
     return
        
   def resampleLabelMaps(self, roi, baseline, images, transforms):
@@ -434,30 +412,18 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
   # redo this function similar to how it is done with the labelstatistics module
   def calculateStatistics(self, images):
     # initialize results list
-    #results = []
-    #headers = ['Volume','Mean','Variance','Maximum','Minimum']
-    #results.append(headers)
+    keys = ("Image","Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev")
+    results = {}
+    results['Labels'] = []
   
     # iterate through all the images
     for x in range(0,len(images)):
         if( images[x] != None ):
-            # pull image from slicer
-            #image_here = sitkUtils.PullFromSlicer(images[x].GetID())
-
             # pull roi from slicer
             roi = slicer.util.getNode(images[x].GetName() + '-label')
-            #roi_here = sitkUtils.PullFromSlicer(roi.GetID())
-            
-            # calculate statistics
-            #individuals = self.getLabelStats(image_here, roi_here)
-            #results.append(individuals)
+            self.getLabelStats(images[x], roi, results)
 
-            self.getLabelStats2(images[x], roi)
-            
-    # print out results
-    #for x in range(0, len(results)):
-        #print(results[x])
-
+    print(results)
     return True
     
   def showLayout(self, images, transforms):
@@ -474,6 +440,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
             # observe transform with roi
             roi = slicer.util.getNode(images[x].GetName() + '-label')
             roi.SetAndObserveTransformNodeID( transforms[x].GetID() )
+
     return
 
 class LongitudinalFeatureExtractionTest(ScriptedLoadableModuleTest):
