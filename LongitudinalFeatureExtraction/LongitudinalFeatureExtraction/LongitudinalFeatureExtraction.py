@@ -208,13 +208,13 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     #
     # Apply Button
     #
-    self.applyButton = qt.QPushButton("Apply")
-    self.applyButton.toolTip = "Run the algorithm."
-    self.applyButton.enabled = True
-    parametersFormLayout.addRow(self.applyButton)
+    self.resampleLabelMapsButton = qt.QPushButton("Resample")
+    self.resampleLabelMapsButton.toolTip = "Resample the label maps to find the roi in all images in their original image space."
+    self.resampleLabelMapsButton.enabled = True
+    parametersFormLayout.addRow(self.resampleLabelMapsButton)
 
     # connections
-    self.applyButton.connect('clicked(bool)', self.onApplyButton)
+    self.resampleLabelMapsButton.connect('clicked(bool)', self.onresampleLabelMapsButton)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -228,14 +228,14 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
   def onSelect(self):
     self.applyButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode()
 
-  def onApplyButton(self):
+  def onresampleLabelMapsButton(self):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
     images = [self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
     # gather transforms into list
     transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
     # send to logic
-    logic.run(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
+    logic.resampleLabelMaps(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
 
 #
 # LongitudinalFeatureExtractionLogic
@@ -266,7 +266,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     
   def printStatus(self, node, event):
     status = node.GetStatusString()
-    print('    Apply transform ' + status)
+    print('  Apply transform ' + status)
     return
     
   def applyTransform(self, image, roi, transform):
@@ -289,9 +289,6 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     # call module
     cliNode = None
     cliNode = slicer.cli.run( slicer.modules.brainsresample, cliNode, parameters )
-    print("begin wait")
-    time.sleep(1)
-    print("end wait")
     print(cliNode.AddObserver('ModifiedEvent', self.printStatus))
     
     return roiNew
@@ -312,7 +309,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     
     return results
        
-  def run(self, roi, baseline, images, transforms):
+  def resampleLabelMaps(self, roi, baseline, images, transforms):
     # obtain statistics on vol1 with corresponding label map
     headers = ['Volume','Mean','Variance','Maximum','Minimum']
     results=[]
@@ -321,16 +318,16 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     logging.info('Obtaining statistics')
     
     # pull label map from slicer
-    roi_here = sitkUtils.PullFromSlicer(roi.GetID())
-    image_here = sitkUtils.PullFromSlicer(baseline.GetID())
+    #roi_here = sitkUtils.PullFromSlicer(roi.GetID())
+    #image_here = sitkUtils.PullFromSlicer(baseline.GetID())
     # get statistics on baseline image
-    results.append(self.getLabelStats(image_here,roi_here))
-    x = 0
+    #results.append(self.getLabelStats(image_here,roi_here))
+
     # perform actions on each image/transform pair
-    #for x in xrange(0, len(images)):
-        #if( images[x] != None ):
+    for x in xrange(0, len(images)):
+        if( images[x] != None ):
             # apply transforms and create new rois/image
-    roiNew = self.applyTransform( images[x], roi, transforms[x] )
+            roiNew = self.applyTransform( images[x], roi, transforms[x] )
             
             # pull volumes and rois from slicer
             #image_here = sitkUtils.PullFromSlicer(images[x].GetID())
