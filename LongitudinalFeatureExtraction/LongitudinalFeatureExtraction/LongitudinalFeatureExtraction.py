@@ -349,6 +349,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     
     return roiNew
     
+  # not used anymore
   def getLabelStats(self, image, roi):
     # find label value within label map
     findLabel = sitk.StatisticsImageFilter()
@@ -364,6 +365,62 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     results = [stats.GetCount(label)*voxelVolume, stats.GetMean(label), stats.GetVariance(label),stats.GetMaximum(label),stats.GetMinimum(label)]
     
     return results
+    
+  # copied/modified from labelstatistics module
+  def getLabelStats2(self, image, roi):
+    # define headers
+    keys = ("Image","Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev")
+    labelStats = {}
+    labelStats['Labels'] = []
+    # determine volume of a voxel and conversion factor to cubed centimeters
+    cubicMMPerVoxel = reduce(lambda x,y: x*y, roi.GetSpacing())
+    ccPerCubicMM = 0.001
+    
+    # calculate the min and max of the roi image
+    stataccum = vtk.vtkImageAccumulate()
+    stataccum.SetInputConnection(roi.GetImageDataConnection())
+    stataccum.Update()
+    lo = int(stataccum.GetMin()[0])
+    hi = int(stataccum.GetMax()[0])
+    
+    # iterate through all the labels in the image
+    for i in xrange(lo,hi+1):
+        # threshold roi image
+        thresholder = vtk.vtkImageThreshold()
+        thresholder.SetInputConnection(roi.GetImageDataConnection())
+        thresholder.SetInValue(1)
+        thresholder.SetOutValue(0)
+        thresholder.ReplaceOutOn()
+        thresholder.ThresholdBetween(i,i)
+        thresholder.SetOutputScalarType(image.GetImageData().GetScalarType())
+        thresholder.Update()
+
+        #  use vtk's statistics class with the binary labelmap as a stencil
+        stencil = vtk.vtkImageToImageStencil()
+        stencil.SetInputConnection(thresholder.GetOutputPort())
+        stencil.ThresholdBetween(1, 1)
+        stat1 = vtk.vtkImageAccumulate()
+        stat1.SetInputConnection(image.GetImageDataConnection())
+        stencil.Update()
+        stat1.SetStencilData(stencil.GetOutput())
+        stat1.Update()
+
+        # gather stats if count is greater than zero
+        if stat1.GetVoxelCount() > 0:
+            # add an entry to the LabelStats list
+            labelStats["Labels"].append(i)
+            labelStats[i,"Image"] = image.GetName()
+            labelStats[i,"Index"] = i
+            labelStats[i,"Count"] = stat1.GetVoxelCount()
+            labelStats[i,"Volume mm^3"] = labelStats[i,"Count"] * cubicMMPerVoxel
+            labelStats[i,"Volume cc"] = labelStats[i,"Volume mm^3"] * ccPerCubicMM
+            labelStats[i,"Min"] = stat1.GetMin()[0]
+            labelStats[i,"Max"] = stat1.GetMax()[0]
+            labelStats[i,"Mean"] = stat1.GetMean()[0]
+            labelStats[i,"StdDev"] = stat1.GetStandardDeviation()[0]
+    
+    print(labelStats)
+    return
        
   def resampleLabelMaps(self, roi, baseline, images, transforms):
     # perform actions on each image/transform pair
@@ -377,27 +434,29 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
   # redo this function similar to how it is done with the labelstatistics module
   def calculateStatistics(self, images):
     # initialize results list
-    results = []
-    headers = ['Volume','Mean','Variance','Maximum','Minimum']
-    results.append(headers)
+    #results = []
+    #headers = ['Volume','Mean','Variance','Maximum','Minimum']
+    #results.append(headers)
   
     # iterate through all the images
     for x in range(0,len(images)):
         if( images[x] != None ):
             # pull image from slicer
-            image_here = sitkUtils.PullFromSlicer(images[x].GetID())
+            #image_here = sitkUtils.PullFromSlicer(images[x].GetID())
 
             # pull roi from slicer
             roi = slicer.util.getNode(images[x].GetName() + '-label')
-            roi_here = sitkUtils.PullFromSlicer(roi.GetID())
+            #roi_here = sitkUtils.PullFromSlicer(roi.GetID())
             
             # calculate statistics
-            individuals = self.getLabelStats(image_here, roi_here)
-            results.append(individuals)
+            #individuals = self.getLabelStats(image_here, roi_here)
+            #results.append(individuals)
+
+            self.getLabelStats2(images[x], roi)
             
     # print out results
-    for x in range(0, len(results)):
-        print(results[x])
+    #for x in range(0, len(results)):
+        #print(results[x])
 
     return True
     
