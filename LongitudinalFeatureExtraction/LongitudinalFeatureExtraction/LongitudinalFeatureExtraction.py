@@ -5,6 +5,7 @@ from slicer.ScriptedLoadableModule import *
 import logging
 import SimpleITK as sitk
 import sitkUtils
+import time
 
 #
 # LongitudinalFeatureExtraction
@@ -266,7 +267,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
   def printStatus(self, node, event):
     status = node.GetStatusString()
     print('    Apply transform ' + status)
-    return status
+    return
     
   def applyTransform(self, image, roi, transform):
     # create new volumes
@@ -275,8 +276,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     slicer.mrmlScene.AddNode( roiNew )
     
     # take inverse of transform
-    # convert transform to grid transform
-    transformLogic = slicer.modules.transforms.logic
+    transform.Inverse()
     
     # resample roi using inverse transform
     parameters = {}
@@ -289,8 +289,10 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     # call module
     cliNode = None
     cliNode = slicer.cli.run( slicer.modules.brainsresample, cliNode, parameters )
-    print(cliNode.GetStatusString())
-    observerTag = cliNode.AddObserver('ModifiedEvent', self.printStatus)
+    print("begin wait")
+    time.sleep(1)
+    print("end wait")
+    print(cliNode.AddObserver('ModifiedEvent', self.printStatus))
     
     return roiNew
     
@@ -323,12 +325,12 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     image_here = sitkUtils.PullFromSlicer(baseline.GetID())
     # get statistics on baseline image
     results.append(self.getLabelStats(image_here,roi_here))
-    
+    x = 0
     # perform actions on each image/transform pair
-    for x in xrange(0, len(images)):
-        if( images[x] != None ):
+    #for x in xrange(0, len(images)):
+        #if( images[x] != None ):
             # apply transforms and create new rois/image
-            roiNew = self.applyTransform( images[x], roi, transforms[x] )
+    roiNew = self.applyTransform( images[x], roi, transforms[x] )
             
             # pull volumes and rois from slicer
             #image_here = sitkUtils.PullFromSlicer(images[x].GetID())
