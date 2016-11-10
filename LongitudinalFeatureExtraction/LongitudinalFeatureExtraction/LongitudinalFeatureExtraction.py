@@ -118,7 +118,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.transform2Selector.selectNodeUponCreation = True
     self.transform2Selector.addEnabled = False
     self.transform2Selector.removeEnabled = False
-    self.transform2Selector.noneEnabled = False
+    self.transform2Selector.noneEnabled = True
     self.transform2Selector.showHidden = False
     self.transform2Selector.showChildNodeTypes = False
     self.transform2Selector.setMRMLScene( slicer.mrmlScene )
@@ -206,9 +206,9 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     parametersFormLayout.addRow("Transform: ", self.transform4Selector)
 
     #
-    # Apply Button
+    # Resample rois Button
     #
-    self.resampleLabelMapsButton = qt.QPushButton("Resample")
+    self.resampleLabelMapsButton = qt.QPushButton("Resample region of interest")
     self.resampleLabelMapsButton.toolTip = "Resample the label maps to find the roi in all images in their original image space."
     self.resampleLabelMapsButton.enabled = True
     parametersFormLayout.addRow(self.resampleLabelMapsButton)
@@ -220,13 +220,33 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.layout.addStretch(1)
 
     # Refresh Apply button state
-    self.onSelect()
+    self.onSelectResample()
+    
+    #
+    # Calculate statistics Button
+    #
+    self.calculateStatsButton = qt.QPushButton("Calculate statistics")
+    self.calculateStatsButton.toolTip = "Calculate statistics from each region of interest."
+    self.calculateStatsButton.enabled = True
+    parametersFormLayout.addRow(self.calculateStatsButton)
+
+    # connections
+    self.calculateStatsButton.connect('clicked(bool)', self.oncalculateStatsButton)
+
+    # Add vertical spacer
+    self.layout.addStretch(1)
+
+    # Refresh Apply button state
+    self.onSelectCalculate()
 
   def cleanup(self):
     pass
 
-  def onSelect(self):
-    self.applyButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode()
+  def onSelectResample(self):
+    self.resampleLabelMapsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode()
+    
+  def onSelectCalculate(self):
+    self.calculateStatsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode()
 
   def onresampleLabelMapsButton(self):
     logic = LongitudinalFeatureExtractionLogic()
@@ -236,6 +256,13 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
     # send to logic
     logic.resampleLabelMaps(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
+
+  def oncalculateStatsButton(self):
+    logic = LongitudinalFeatureExtractionLogic()
+    # gather images into list
+    images = [self.baselineSelector.currentNode(), self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
+    # send to logic
+    logic.calculateStatistics(images)
 
 #
 # LongitudinalFeatureExtractionLogic
@@ -310,39 +337,39 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     return results
        
   def resampleLabelMaps(self, roi, baseline, images, transforms):
-    # obtain statistics on vol1 with corresponding label map
-    headers = ['Volume','Mean','Variance','Maximum','Minimum']
-    results=[]
-    results.append(headers)
-    
-    logging.info('Obtaining statistics')
-    
-    # pull label map from slicer
-    #roi_here = sitkUtils.PullFromSlicer(roi.GetID())
-    #image_here = sitkUtils.PullFromSlicer(baseline.GetID())
-    # get statistics on baseline image
-    #results.append(self.getLabelStats(image_here,roi_here))
-
     # perform actions on each image/transform pair
     for x in xrange(0, len(images)):
         if( images[x] != None ):
             # apply transforms and create new rois/image
             roiNew = self.applyTransform( images[x], roi, transforms[x] )
-            
-            # pull volumes and rois from slicer
-            #image_here = sitkUtils.PullFromSlicer(images[x].GetID())
-            #print(roiNew.GetID())
-            #roi_here = sitkUtils.PullFromSlicer(roiNew.GetID())
-
-            # get statistics
-            #results.append(self.getLabelStats(image_here,roi_here))
-    
-    #for x in xrange(0,len(results)):
-        #print( results[x] )
-        #print('\n')
-    logging.info('Processing completed')
+ 
     return True
+    
+  def calculateStatistics(self, images):
+    # initialize results list
+    results = []
+    headers = ['Volume','Mean','Variance','Maximum','Minimum']
+    results.append(headers)
+  
+    # iterate through all the images
+    for x in range(0,len(images)):
+        if( images[x] != None ):
+            # pull image from slicer
+            image_here = sitkUtils.PullFromSlicer(images[x].GetID())
 
+            # pull roi from slicer
+            roi = slicer.util.getNode(images[x].GetName() + '-label')
+            roi_here = sitkUtils.PullFromSlicer(roi.GetID())
+            
+            # calculate statistics
+            individuals = self.getLabelStats(image_here, roi_here)
+            results.append(individuals)
+            
+    # print out results
+    for x in range(0, len(results)):
+        print(results[x])
+
+    return True
 
 class LongitudinalFeatureExtractionTest(ScriptedLoadableModuleTest):
   """
