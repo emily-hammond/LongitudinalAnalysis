@@ -118,7 +118,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.transform2Selector.selectNodeUponCreation = True
     self.transform2Selector.addEnabled = False
     self.transform2Selector.removeEnabled = False
-    self.transform2Selector.noneEnabled = True
+    self.transform2Selector.noneEnabled = False
     self.transform2Selector.showHidden = False
     self.transform2Selector.showChildNodeTypes = False
     self.transform2Selector.setMRMLScene( slicer.mrmlScene )
@@ -238,6 +238,23 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
 
     # Refresh Apply button state
     self.onSelectCalculate()
+    
+    #
+    # Show layout Button
+    #
+    self.showLayoutButton = qt.QPushButton("Registered images layout")
+    self.showLayoutButton.toolTip = "View the images in the baseline image space with transforms applied."
+    self.showLayoutButton.enabled = True
+    parametersFormLayout.addRow(self.showLayoutButton)
+
+    # connections
+    self.showLayoutButton.connect('clicked(bool)', self.onshowLayoutButton)
+
+    # Add vertical spacer
+    self.layout.addStretch(1)
+
+    # Refresh Apply button state
+    self.onShowLayout()
 
   def cleanup(self):
     pass
@@ -247,6 +264,9 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     
   def onSelectCalculate(self):
     self.calculateStatsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode()
+    
+  def onShowLayout(self):
+    self.showLayoutButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode()
 
   def onresampleLabelMapsButton(self):
     logic = LongitudinalFeatureExtractionLogic()
@@ -263,6 +283,15 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     images = [self.baselineSelector.currentNode(), self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
     # send to logic
     logic.calculateStatistics(images)
+    
+  def onshowLayoutButton(self):
+    logic = LongitudinalFeatureExtractionLogic()
+    # gather images into list
+    images = [self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
+    # gather transforms into list
+    transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
+    # send to logic
+    logic.showLayout(images, transforms)
 
 #
 # LongitudinalFeatureExtractionLogic
@@ -345,6 +374,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
  
     return True
     
+  # redo this function similar to how it is done with the labelstatistics module
   def calculateStatistics(self, images):
     # initialize results list
     results = []
@@ -370,6 +400,22 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
         print(results[x])
 
     return True
+    
+  def showLayout(self, images, transforms):
+ 
+    # apply and observe transforms on appropriate images
+    for x in range(0, len(images)):
+        if( images[x] != None ):
+            # inverse transform (undo what was done previously)
+            transforms[x].Inverse()
+            
+            # observe transform with image
+            images[x].SetAndObserveTransformNodeID( transforms[x].GetID() )
+            
+            # observe transform with roi
+            roi = slicer.util.getNode(images[x].GetName() + '-label')
+            roi.SetAndObserveTransformNodeID( transforms[x].GetID() )
+    return
 
 class LongitudinalFeatureExtractionTest(ScriptedLoadableModuleTest):
   """
