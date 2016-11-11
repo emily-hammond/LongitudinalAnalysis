@@ -44,6 +44,46 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     ScriptedLoadableModuleWidget.setup(self)
 
     # Instantiate and connect widgets ...
+    
+    # 
+    # number of images
+    #
+    numberOfImagesButton = ctk.ctkCollapsibleButton()
+    numberOfImagesButton.text = "Number of images"
+    self.layout.addWidget(numberOfImagesButton)
+    
+    # Layout within the dummy collapsible button
+    parametersFormLayout = qt.QFormLayout(numberOfImagesButton)
+    
+    #
+    # Number of images selector (not fully implemented!!!)
+    #
+    self.numberSelector = slicer.qMRMLNodeComboBox()
+    self.numberSelector.nodeTypes = ["vtkMRMLSelectionNode"]
+    self.numberSelector.selectNodeUponCreation = True
+    self.numberSelector.addEnabled = False
+    self.numberSelector.removeEnabled = False
+    self.numberSelector.noneEnabled = True
+    self.numberSelector.showHidden = False
+    self.numberSelector.showChildNodeTypes = False
+    self.numberSelector.setMRMLScene( slicer.mrmlScene )
+    self.numberSelector.setToolTip( "State the number of images to compare." )
+    parametersFormLayout.addRow("Number of images: ", self.numberSelector)
+    
+    #
+    # CSV file for results (not fully implemented!!!)
+    #
+    self.numberSelector = slicer.qMRMLNodeComboBox()
+    self.numberSelector.nodeTypes = ["vtkMRMLAnnotationStorageNode"]
+    self.numberSelector.selectNodeUponCreation = True
+    self.numberSelector.addEnabled = False
+    self.numberSelector.removeEnabled = False
+    self.numberSelector.noneEnabled = True
+    self.numberSelector.showHidden = False
+    self.numberSelector.showChildNodeTypes = False
+    self.numberSelector.setMRMLScene( slicer.mrmlScene )
+    self.numberSelector.setToolTip( "Type the desired filename to store the results." )
+    parametersFormLayout.addRow("CSV file: ", self.numberSelector)    
 
     #
     # baseline image Area
@@ -350,6 +390,9 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     return roiNew
 
   def getLabelStats(self, image, roi, labelStats):
+    # instantiate results dictionary
+    labelStats["Image"].append(image.GetName())
+  
     # copied/modified from labelstatistics module
     # determine volume of a voxel and conversion factor to cubed centimeters
     cubicMMPerVoxel = reduce(lambda x,y: x*y, roi.GetSpacing())
@@ -388,17 +431,17 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
         if stat1.GetVoxelCount() > 0:
             # add an entry to the LabelStats list
             labelStats["Labels"].append(i)
-            labelStats[i,"Image"] = image.GetName()
-            labelStats[i,"Index"] = i
-            labelStats[i,"Count"] = stat1.GetVoxelCount()
-            labelStats[i,"Volume mm^3"] = labelStats[i,"Count"] * cubicMMPerVoxel
-            labelStats[i,"Volume cc"] = labelStats[i,"Volume mm^3"] * ccPerCubicMM
-            labelStats[i,"Min"] = stat1.GetMin()[0]
-            labelStats[i,"Max"] = stat1.GetMax()[0]
-            labelStats[i,"Mean"] = stat1.GetMean()[0]
-            labelStats[i,"StdDev"] = stat1.GetStandardDeviation()[0]
+            labelStats[image.GetName(),i,"Image"] = image.GetName()
+            labelStats[image.GetName(),i,"Index"] = i
+            labelStats[image.GetName(),i,"Count"] = stat1.GetVoxelCount()
+            labelStats[image.GetName(),i,"Volume mm^3"] = labelStats[image.GetName(),i,"Count"] * cubicMMPerVoxel
+            labelStats[image.GetName(),i,"Volume cc"] = labelStats[image.GetName(),i,"Volume mm^3"] * ccPerCubicMM
+            labelStats[image.GetName(),i,"Min"] = stat1.GetMin()[0]
+            labelStats[image.GetName(),i,"Max"] = stat1.GetMax()[0]
+            labelStats[image.GetName(),i,"Mean"] = stat1.GetMean()[0]
+            labelStats[image.GetName(),i,"StdDev"] = stat1.GetStandardDeviation()[0]
 
-    return
+    return hi
        
   def resampleLabelMaps(self, roi, baseline, images, transforms):
     # perform actions on each image/transform pair
@@ -412,8 +455,9 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
   # redo this function similar to how it is done with the labelstatistics module
   def calculateStatistics(self, images):
     # initialize results list
-    keys = ("Image","Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev")
+    keys = ["Image","Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev"]
     results = {}
+    results['Image'] = []
     results['Labels'] = []
   
     # iterate through all the images
@@ -421,9 +465,17 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
         if( images[x] != None ):
             # pull roi from slicer
             roi = slicer.util.getNode(images[x].GetName() + '-label')
-            self.getLabelStats(images[x], roi, results)
-
-    print(results)
+            maxLabel = self.getLabelStats(images[x], roi, results)
+            
+    # print out results in a nice table
+    print(keys)
+    for im in results['Image']:
+        for label in xrange(min(results['Labels']),max(results['Labels'])+1):
+            data = []
+            for header in keys:
+                data.append(results[im,label,header])
+            print(data)
+    
     return True
     
   def showLayout(self, images, transforms):
