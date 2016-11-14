@@ -69,6 +69,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.numberSelector.setMRMLScene( slicer.mrmlScene )
     self.numberSelector.setToolTip( "State the number of images to compare." )
     parametersFormLayout.addRow("Number of images: ", self.numberSelector)
+    self.numberOfImages = 4
     
     #
     # CSV file for results (not fully implemented!!!)
@@ -125,125 +126,55 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.roiSelector.setToolTip( "Pick the region of interest." )
     parametersFormLayout.addRow("Region of interest (label map) ", self.roiSelector)
     
-    #
-    # image2 Area
-    #
-    image2CollapsibleButton = ctk.ctkCollapsibleButton()
-    image2CollapsibleButton.text = "Image set 2"
-    self.layout.addWidget(image2CollapsibleButton)
+    # define lists to store images and transforms
+    self.imageNodes = []
+    self.transformNodes = []
+    
+    for i in xrange(1,self.numberOfImages):
+        
+        #
+        # image Area
+        #
+        imageCollapsibleButton = ctk.ctkCollapsibleButton()
+        imageCollapsibleButton.text = "Image set " + str(i)
+        self.layout.addWidget(imageCollapsibleButton)
 
-    # Layout within the dummy collapsible button
-    parametersFormLayout = qt.QFormLayout(image2CollapsibleButton)
-    
-    #
-    # image2 volume selector
-    #
-    self.image2Selector = slicer.qMRMLNodeComboBox()
-    self.image2Selector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.image2Selector.selectNodeUponCreation = True
-    self.image2Selector.addEnabled = False
-    self.image2Selector.removeEnabled = False
-    self.image2Selector.noneEnabled = False
-    self.image2Selector.showHidden = False
-    self.image2Selector.showChildNodeTypes = False
-    self.image2Selector.setMRMLScene( slicer.mrmlScene )
-    self.image2Selector.setToolTip( "Pick the second image." )
-    parametersFormLayout.addRow("Image 2: ", self.image2Selector)
-    
-    #
-    # transform selector
-    #
-    self.transform2Selector = slicer.qMRMLNodeComboBox()
-    self.transform2Selector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
-    self.transform2Selector.selectNodeUponCreation = True
-    self.transform2Selector.addEnabled = False
-    self.transform2Selector.removeEnabled = False
-    self.transform2Selector.noneEnabled = False
-    self.transform2Selector.showHidden = False
-    self.transform2Selector.showChildNodeTypes = False
-    self.transform2Selector.setMRMLScene( slicer.mrmlScene )
-    self.transform2Selector.setToolTip( "Pick the transform from image2 to image 1." )
-    parametersFormLayout.addRow("Transform: ", self.transform2Selector)
-    
-    #
-    # image3 Area
-    #
-    image3CollapsibleButton = ctk.ctkCollapsibleButton()
-    image3CollapsibleButton.text = "Image set 3"
-    self.layout.addWidget(image3CollapsibleButton)
-
-    # Layout within the dummy collapsible button
-    parametersFormLayout = qt.QFormLayout(image3CollapsibleButton)
-    
-    #
-    # image2 volume selector
-    #
-    self.image3Selector = slicer.qMRMLNodeComboBox()
-    self.image3Selector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.image3Selector.selectNodeUponCreation = True
-    self.image3Selector.addEnabled = False
-    self.image3Selector.removeEnabled = False
-    self.image3Selector.noneEnabled = True
-    self.image3Selector.showHidden = False
-    self.image3Selector.showChildNodeTypes = False
-    self.image3Selector.setMRMLScene( slicer.mrmlScene )
-    self.image3Selector.setToolTip( "Pick the second image." )
-    parametersFormLayout.addRow("Image 3: ", self.image3Selector)
-    
-    #
-    # transform selector
-    #
-    self.transform3Selector = slicer.qMRMLNodeComboBox()
-    self.transform3Selector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
-    self.transform3Selector.selectNodeUponCreation = True
-    self.transform3Selector.addEnabled = False
-    self.transform3Selector.removeEnabled = False
-    self.transform3Selector.noneEnabled = True
-    self.transform3Selector.showHidden = False
-    self.transform3Selector.showChildNodeTypes = False
-    self.transform3Selector.setMRMLScene( slicer.mrmlScene )
-    self.transform3Selector.setToolTip( "Pick the transform from image2 to image 1." )
-    parametersFormLayout.addRow("Transform: ", self.transform3Selector)
-    
-    #
-    # image4 Area
-    #
-    image4CollapsibleButton = ctk.ctkCollapsibleButton()
-    image4CollapsibleButton.text = "Image set 4"
-    self.layout.addWidget(image4CollapsibleButton)
-
-    # Layout within the dummy collapsible button
-    parametersFormLayout = qt.QFormLayout(image4CollapsibleButton)
-    
-    #
-    # image2 volume selector
-    #
-    self.image4Selector = slicer.qMRMLNodeComboBox()
-    self.image4Selector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.image4Selector.selectNodeUponCreation = True
-    self.image4Selector.addEnabled = False
-    self.image4Selector.removeEnabled = False
-    self.image4Selector.noneEnabled = True
-    self.image4Selector.showHidden = False
-    self.image4Selector.showChildNodeTypes = False
-    self.image4Selector.setMRMLScene( slicer.mrmlScene )
-    self.image4Selector.setToolTip( "Pick the second image." )
-    parametersFormLayout.addRow("Image 4: ", self.image4Selector)
-    
-    #
-    # transform selector
-    #
-    self.transform4Selector = slicer.qMRMLNodeComboBox()
-    self.transform4Selector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
-    self.transform4Selector.selectNodeUponCreation = True
-    self.transform4Selector.addEnabled = False
-    self.transform4Selector.removeEnabled = False
-    self.transform4Selector.noneEnabled = True
-    self.transform4Selector.showHidden = False
-    self.transform4Selector.showChildNodeTypes = False
-    self.transform4Selector.setMRMLScene( slicer.mrmlScene )
-    self.transform4Selector.setToolTip( "Pick the transform from image2 to image 1." )
-    parametersFormLayout.addRow("Transform: ", self.transform4Selector)
+        # Layout within the dummy collapsible button
+        parametersFormLayout = qt.QFormLayout(imageCollapsibleButton)
+        
+        #
+        # image2 volume selector
+        #
+        self.imageSelector = slicer.qMRMLNodeComboBox()
+        self.imageSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
+        self.imageSelector.selectNodeUponCreation = True
+        self.imageSelector.addEnabled = False
+        self.imageSelector.removeEnabled = False
+        self.imageSelector.noneEnabled = False
+        self.imageSelector.showHidden = False
+        self.imageSelector.showChildNodeTypes = False
+        self.imageSelector.setMRMLScene( slicer.mrmlScene )
+        self.imageSelector.setToolTip( "Pick the second image." )
+        parametersFormLayout.addRow("Image: ", self.imageSelector)
+        
+        #
+        # transform selector
+        #
+        self.transformSelector = slicer.qMRMLNodeComboBox()
+        self.transformSelector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
+        self.transformSelector.selectNodeUponCreation = True
+        self.transformSelector.addEnabled = False
+        self.transformSelector.removeEnabled = False
+        self.transformSelector.noneEnabled = False
+        self.transformSelector.showHidden = False
+        self.transformSelector.showChildNodeTypes = False
+        self.transformSelector.setMRMLScene( slicer.mrmlScene )
+        self.transformSelector.setToolTip( "Pick the transform from the image to the baseline image." )
+        parametersFormLayout.addRow("Transform: ", self.transformSelector)
+        
+        # store node information
+        self.imageNodes.append(self.imageSelector)
+        self.transformNodes.append(self.transformSelector)
 
     #
     # Resample rois Button
@@ -300,36 +231,45 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     pass
 
   def onSelectResample(self):
-    self.resampleLabelMapsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode()
+    self.resampleLabelMapsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
     
   def onSelectCalculate(self):
-    self.calculateStatsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode()
+    self.calculateStatsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
     
   def onShowLayout(self):
-    self.showLayoutButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode() and self.image2Selector.currentNode() and self.transform2Selector.currentNode()
+    self.showLayoutButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
 
   def onresampleLabelMapsButton(self):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
-    images = [self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
+    images = []
+    for i in xrange(0,self.numberOfImages-1):
+        images.append(self.imageNodes[i].currentNode())
     # gather transforms into list
-    transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
+    transforms = []
+    for i in xrange(0,self.numberOfImages-1):
+        transforms.append(self.transformNodes[i].currentNode())
     # send to logic
     logic.resampleLabelMaps(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
 
   def oncalculateStatsButton(self):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
-    images = [self.baselineSelector.currentNode(), self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
-    # send to logic
+    images = []
+    for i in xrange(0,self.numberOfImages-1):
+        images.append(self.imageNodes[i].currentNode())    # send to logic
     logic.calculateStatistics(images, self.fileSelector.currentNode())
     
   def onshowLayoutButton(self):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
-    images = [self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
+    images = []
+    for i in xrange(0,self.numberOfImages-1):
+        images.append(self.imageNodes[i].currentNode())
     # gather transforms into list
-    transforms = [self.transform2Selector.currentNode(), self.transform3Selector.currentNode(), self.transform4Selector.currentNode()]
+    transforms = []
+    for i in xrange(0,self.numberOfImages-1):
+        transforms.append(self.transformNodes[i].currentNode())
     # send to logic
     logic.showLayout(images, transforms)
 
