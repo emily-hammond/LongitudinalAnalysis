@@ -73,17 +73,17 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     #
     # CSV file for results (not fully implemented!!!)
     #
-    self.numberSelector = slicer.qMRMLNodeComboBox()
-    self.numberSelector.nodeTypes = ["vtkMRMLAnnotationStorageNode"]
-    self.numberSelector.selectNodeUponCreation = True
-    self.numberSelector.addEnabled = False
-    self.numberSelector.removeEnabled = False
-    self.numberSelector.noneEnabled = True
-    self.numberSelector.showHidden = False
-    self.numberSelector.showChildNodeTypes = False
-    self.numberSelector.setMRMLScene( slicer.mrmlScene )
-    self.numberSelector.setToolTip( "Type the desired filename to store the results." )
-    parametersFormLayout.addRow("CSV file: ", self.numberSelector)    
+    self.fileSelector = slicer.qMRMLNodeComboBox()
+    self.fileSelector.nodeTypes = ["vtkMRMLAnnotationStorageNode"]
+    self.fileSelector.selectNodeUponCreation = True
+    self.fileSelector.addEnabled = False
+    self.fileSelector.removeEnabled = False
+    self.fileSelector.noneEnabled = True
+    self.fileSelector.showHidden = False
+    self.fileSelector.showChildNodeTypes = False
+    self.fileSelector.setMRMLScene( slicer.mrmlScene )
+    self.fileSelector.setToolTip( "Type the desired filename to store the results." )
+    parametersFormLayout.addRow("CSV file: ", self.fileSelector)    
 
     #
     # baseline image Area
@@ -295,7 +295,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
 
     # Refresh Apply button state
     self.onShowLayout()
-
+    
   def cleanup(self):
     pass
 
@@ -322,7 +322,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # gather images into list
     images = [self.baselineSelector.currentNode(), self.image2Selector.currentNode(), self.image3Selector.currentNode(), self.image4Selector.currentNode()]
     # send to logic
-    logic.calculateStatistics(images)
+    logic.calculateStatistics(images, self.fileSelector.currentNode())
     
   def onshowLayoutButton(self):
     logic = LongitudinalFeatureExtractionLogic()
@@ -453,7 +453,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     return True
     
   # redo this function similar to how it is done with the labelstatistics module
-  def calculateStatistics(self, images):
+  def calculateStatistics(self, images, filename):
     # initialize results list
     keys = ["Image","Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev"]
     results = {}
@@ -475,6 +475,19 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
             for header in keys:
                 data.append(results[im,label,header])
             print(data)
+            
+    # write results to file if a csv file is given
+    if( filename != None ):
+        with open(filename,'w') as file:
+            file.write(', '.join(keys))
+            file.write('\n')
+            for im in results['Image']:
+                for label in xrange(min(results['Labels']),max(results['Labels'])+1):
+                    data = []
+                    for header in keys:
+                        data.append(results[im,label,header])
+                    file.write(', '.join(data))
+                    file.write('\n')       
     
     return True
     
