@@ -45,11 +45,15 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
 
     # Instantiate and connect widgets ...
     
+    # define lists to store images and transforms
+    self.imageNodes = []
+    self.transformNodes = []
+    
     # 
     # number of images
     #
     numberOfImagesButton = slicer.qMRMLCollapsibleButton()
-    numberOfImagesButton.text = "Number of images"
+    numberOfImagesButton.text = "Setup"
     self.layout.addWidget(numberOfImagesButton)
     
     # Layout within the dummy collapsible button
@@ -58,25 +62,19 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     #
     # Number of images selector (not fully implemented!!!)
     #
-    self.numberSelector = slicer.qMRMLNodeComboBox()
-    self.numberSelector.nodeTypes = ["vtkMRMLSelectionNode"]
-    self.numberSelector.selectNodeUponCreation = True
-    self.numberSelector.addEnabled = False
-    self.numberSelector.removeEnabled = False
-    self.numberSelector.noneEnabled = True
-    self.numberSelector.showHidden = False
-    self.numberSelector.showChildNodeTypes = False
-    self.numberSelector.setMRMLScene( slicer.mrmlScene )
-    self.numberSelector.setToolTip( "State the number of images to compare." )
+    self.numberSelector = qt.QLineEdit()
+    self.numberSelector.setValidator(qt.QIntValidator())
+    self.numberSelector.setMaxLength(2)
+    self.numberSelector.toolTip = "Enter in the number of images for comparison."
     parametersFormLayout.addRow("Number of images: ", self.numberSelector)
-    self.numberOfImages = 4
+    self.numberSelector.textChanged.connect(self.numberchanged)
         
     #
     # Resample rois Button
     #
     self.fileDialogButton = qt.QPushButton("Select file to store data.")
     self.fileDialogButton.toolTip = "Select the csv file to store the final feature results."
-    self.fileDialogButton.enabled = True
+    self.fileDialogButton.enabled = False
     parametersFormLayout.addRow("CSV file: ", self.fileDialogButton)
     
     # connections
@@ -128,11 +126,10 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.roiSelector.setToolTip( "Pick the region of interest." )
     parametersFormLayout.addRow("Region of interest (label map) ", self.roiSelector)
     
-    # define lists to store images and transforms
-    self.imageNodes = []
-    self.transformNodes = []
-    
-    for i in xrange(1,self.numberOfImages):
+  def numberchanged(self,number):
+    print(number)
+
+    for i in xrange(1,int(number)):
         
         #
         # image Area
@@ -177,8 +174,8 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
         # store node information
         self.imageNodes.append(self.imageSelector)
         self.transformNodes.append(self.transformSelector)
-
-    #
+        
+#
     # Resample rois Button
     #
     self.resampleLabelMapsButton = qt.QPushButton("Resample region of interest")
@@ -228,13 +225,15 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
 
     # Refresh Apply button state
     self.onShowLayout()
+
+    return
     
   def cleanup(self):
     pass
     
   def onFileDialog(self):
+    self.fileDialogButton.enabled = True
     self.filename = qt.QFileDialog.getSaveFileName()
-    print(self.filename)
  
   def onSelectResample(self):
     self.resampleLabelMapsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
@@ -264,7 +263,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     images = []
     for i in xrange(0,self.numberOfImages-1):
         images.append(self.imageNodes[i].currentNode())    # send to logic
-    logic.calculateStatistics(images, self.fileSelector.currentNode())
+    logic.calculateStatistics(images, self.filename)
     
   def onshowLayoutButton(self):
     logic = LongitudinalFeatureExtractionLogic()
@@ -423,6 +422,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
             print(data)
             
     # write results to file if a csv file is given
+    print(filename)
     if( filename != None ):
         with open(filename,'w') as file:
             file.write(', '.join(keys))
