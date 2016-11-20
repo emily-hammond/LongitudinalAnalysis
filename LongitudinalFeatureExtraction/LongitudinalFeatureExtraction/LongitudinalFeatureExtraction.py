@@ -48,7 +48,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # 
     # number of images
     #
-    numberOfImagesButton = ctk.ctkCollapsibleButton()
+    numberOfImagesButton = slicer.qMRMLCollapsibleButton()
     numberOfImagesButton.text = "Number of images"
     self.layout.addWidget(numberOfImagesButton)
     
@@ -70,26 +70,28 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.numberSelector.setToolTip( "State the number of images to compare." )
     parametersFormLayout.addRow("Number of images: ", self.numberSelector)
     self.numberOfImages = 4
+        
+    #
+    # Resample rois Button
+    #
+    self.fileDialogButton = qt.QPushButton("Select file to store data.")
+    self.fileDialogButton.toolTip = "Select the csv file to store the final feature results."
+    self.fileDialogButton.enabled = True
+    parametersFormLayout.addRow("CSV file: ", self.fileDialogButton)
     
-    #
-    # CSV file for results (not fully implemented!!!)
-    #
-    self.fileSelector = slicer.qMRMLNodeComboBox()
-    self.fileSelector.nodeTypes = ["vtkMRMLAnnotationStorageNode"]
-    self.fileSelector.selectNodeUponCreation = True
-    self.fileSelector.addEnabled = False
-    self.fileSelector.removeEnabled = False
-    self.fileSelector.noneEnabled = True
-    self.fileSelector.showHidden = False
-    self.fileSelector.showChildNodeTypes = False
-    self.fileSelector.setMRMLScene( slicer.mrmlScene )
-    self.fileSelector.setToolTip( "Type the desired filename to store the results." )
-    parametersFormLayout.addRow("CSV file: ", self.fileSelector)    
+    # connections
+    self.fileDialogButton.connect('clicked(bool)', self.onFileDialog)
+
+    # Add vertical spacer
+    self.layout.addStretch(1)
+
+    # Refresh Apply button state
+    self.onFileDialog()
 
     #
     # baseline image Area
     #
-    baselineCollapsibleButton = ctk.ctkCollapsibleButton()
+    baselineCollapsibleButton = slicer.qMRMLCollapsibleButton()
     baselineCollapsibleButton.text = "Baseline image"
     self.layout.addWidget(baselineCollapsibleButton)
 
@@ -135,7 +137,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
         #
         # image Area
         #
-        imageCollapsibleButton = ctk.ctkCollapsibleButton()
+        imageCollapsibleButton = slicer.qMRMLCollapsibleButton()
         imageCollapsibleButton.text = "Image set " + str(i)
         self.layout.addWidget(imageCollapsibleButton)
 
@@ -229,7 +231,11 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     
   def cleanup(self):
     pass
-
+    
+  def onFileDialog(self):
+    self.filename = qt.QFileDialog.getSaveFileName()
+    print(self.filename)
+ 
   def onSelectResample(self):
     self.resampleLabelMapsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
     
