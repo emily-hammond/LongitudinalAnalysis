@@ -18,18 +18,15 @@ class LongitudinalFeatureExtraction(ScriptedLoadableModule):
 
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
-    self.parent.title = "LongitudinalFeatureExtraction" # TODO make this more human readable by adding spaces
-    self.parent.categories = ["Examples"]
+    self.parent.title = "Longitudinal Feature Extraction" # TODO make this more human readable by adding spaces
     self.parent.dependencies = []
-    self.parent.contributors = ["John Doe (AnyWare Corp.)"] # replace with "Firstname Lastname (Organization)"
+    self.parent.contributors = ["Emily Hammond (University of Iowa)"] # replace with "Firstname Lastname (Organization)"
     self.parent.helpText = """
-    This is an example of scripted loadable module bundled in an extension.
-    It performs a simple thresholding on the input volume and optionally captures a screenshot.
+    Identify equivalent regions of interest (ROI) in a registered set of longitudinal images and calculate basic statistics from the ROIs. Inputs:  (1) Number of desired images to compare (2) New file to store the final results in (if desired) (3) Baseline image with corresponding ROI (4) Images with corresponding transforms that take each image into the baseline image space | Outputs: (1) ROIs resampled into each image space (inverse transform is applied) (2) Statistics from each ROI (taken in the original image) (3) Viewing all images in their registered state
     """
     self.parent.acknowledgementText = """
-    This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc.
-    and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR013218-12S1.
-""" # replace with organization, grant and thanks.
+    This file was originally developed by Emily Hammond, University of Iowa.
+    """
 
 #
 # LongitudinalFeatureExtractionWidget
@@ -48,6 +45,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # define lists to store images and transforms
     self.imageNodes = []
     self.transformNodes = []
+    self.filename = None
     
     # 
     # number of images
@@ -74,7 +72,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     #
     self.fileDialogButton = qt.QPushButton("Select file to store data.")
     self.fileDialogButton.toolTip = "Select the csv file to store the final feature results."
-    self.fileDialogButton.enabled = False
+    self.fileDialogButton.enabled = True
     parametersFormLayout.addRow("CSV file: ", self.fileDialogButton)
     
     # connections
@@ -83,99 +81,17 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # Add vertical spacer
     self.layout.addStretch(1)
 
-    # Refresh Apply button state
-    self.onFileDialog()
-
     #
-    # baseline image Area
+    # actions Area
     #
-    baselineCollapsibleButton = slicer.qMRMLCollapsibleButton()
-    baselineCollapsibleButton.text = "Baseline image"
-    self.layout.addWidget(baselineCollapsibleButton)
+    actionsCollapsibleButton = slicer.qMRMLCollapsibleButton()
+    actionsCollapsibleButton.text = "Actions"
+    self.layout.addWidget(actionsCollapsibleButton)
 
     # Layout within the dummy collapsible button
-    parametersFormLayout = qt.QFormLayout(baselineCollapsibleButton)
-
+    parametersFormLayout = qt.QFormLayout(actionsCollapsibleButton)
+	
     #
-    # image (original) volume selector
-    #
-    self.baselineSelector = slicer.qMRMLNodeComboBox()
-    self.baselineSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.baselineSelector.selectNodeUponCreation = True
-    self.baselineSelector.addEnabled = False
-    self.baselineSelector.removeEnabled = False
-    self.baselineSelector.noneEnabled = False
-    self.baselineSelector.showHidden = False
-    self.baselineSelector.showChildNodeTypes = False
-    self.baselineSelector.setMRMLScene( slicer.mrmlScene )
-    self.baselineSelector.setToolTip( "Pick the image with the original ROI." )
-    parametersFormLayout.addRow("Baseline image: ", self.baselineSelector)
-    
-    #
-    # ROI volume selector
-    #
-    self.roiSelector = slicer.qMRMLNodeComboBox()
-    self.roiSelector.nodeTypes = ["vtkMRMLLabelMapVolumeNode"]
-    self.roiSelector.selectNodeUponCreation = True
-    self.roiSelector.addEnabled = False
-    self.roiSelector.removeEnabled = False
-    self.roiSelector.noneEnabled = False
-    self.roiSelector.showHidden = False
-    self.roiSelector.showChildNodeTypes = False
-    self.roiSelector.setMRMLScene( slicer.mrmlScene )
-    self.roiSelector.setToolTip( "Pick the region of interest." )
-    parametersFormLayout.addRow("Region of interest (label map) ", self.roiSelector)
-    
-  def numberchanged(self,number):
-    print(number)
-
-    for i in xrange(1,int(number)):
-        
-        #
-        # image Area
-        #
-        imageCollapsibleButton = slicer.qMRMLCollapsibleButton()
-        imageCollapsibleButton.text = "Image set " + str(i)
-        self.layout.addWidget(imageCollapsibleButton)
-
-        # Layout within the dummy collapsible button
-        parametersFormLayout = qt.QFormLayout(imageCollapsibleButton)
-        
-        #
-        # image2 volume selector
-        #
-        self.imageSelector = slicer.qMRMLNodeComboBox()
-        self.imageSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-        self.imageSelector.selectNodeUponCreation = True
-        self.imageSelector.addEnabled = False
-        self.imageSelector.removeEnabled = False
-        self.imageSelector.noneEnabled = False
-        self.imageSelector.showHidden = False
-        self.imageSelector.showChildNodeTypes = False
-        self.imageSelector.setMRMLScene( slicer.mrmlScene )
-        self.imageSelector.setToolTip( "Pick the second image." )
-        parametersFormLayout.addRow("Image: ", self.imageSelector)
-        
-        #
-        # transform selector
-        #
-        self.transformSelector = slicer.qMRMLNodeComboBox()
-        self.transformSelector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
-        self.transformSelector.selectNodeUponCreation = True
-        self.transformSelector.addEnabled = False
-        self.transformSelector.removeEnabled = False
-        self.transformSelector.noneEnabled = False
-        self.transformSelector.showHidden = False
-        self.transformSelector.showChildNodeTypes = False
-        self.transformSelector.setMRMLScene( slicer.mrmlScene )
-        self.transformSelector.setToolTip( "Pick the transform from the image to the baseline image." )
-        parametersFormLayout.addRow("Transform: ", self.transformSelector)
-        
-        # store node information
-        self.imageNodes.append(self.imageSelector)
-        self.transformNodes.append(self.transformSelector)
-        
-#
     # Resample rois Button
     #
     self.resampleLabelMapsButton = qt.QPushButton("Resample region of interest")
@@ -226,7 +142,91 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # Refresh Apply button state
     self.onShowLayout()
 
-    return
+    #
+    # baseline image Area
+    #
+    baselineCollapsibleButton = slicer.qMRMLCollapsibleButton()
+    baselineCollapsibleButton.text = "Baseline image"
+    self.layout.addWidget(baselineCollapsibleButton)
+
+    # Layout within the dummy collapsible button
+    parametersFormLayout = qt.QFormLayout(baselineCollapsibleButton)
+	
+    #
+    # image (original) volume selector
+    #
+    self.baselineSelector = slicer.qMRMLNodeComboBox()
+    self.baselineSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
+    self.baselineSelector.selectNodeUponCreation = True
+    self.baselineSelector.addEnabled = False
+    self.baselineSelector.removeEnabled = False
+    self.baselineSelector.noneEnabled = False
+    self.baselineSelector.showHidden = False
+    self.baselineSelector.showChildNodeTypes = False
+    self.baselineSelector.setMRMLScene( slicer.mrmlScene )
+    self.baselineSelector.setToolTip( "Pick the image with the original ROI." )
+    parametersFormLayout.addRow("Baseline image: ", self.baselineSelector)
+    
+    #
+    # ROI volume selector
+    #
+    self.roiSelector = slicer.qMRMLNodeComboBox()
+    self.roiSelector.nodeTypes = ["vtkMRMLLabelMapVolumeNode"]
+    self.roiSelector.selectNodeUponCreation = True
+    self.roiSelector.addEnabled = False
+    self.roiSelector.removeEnabled = False
+    self.roiSelector.noneEnabled = False
+    self.roiSelector.showHidden = False
+    self.roiSelector.showChildNodeTypes = False
+    self.roiSelector.setMRMLScene( slicer.mrmlScene )
+    self.roiSelector.setToolTip( "Pick the region of interest." )
+    parametersFormLayout.addRow("Region of interest (label map) ", self.roiSelector)
+    
+  def numberchanged(self,number):
+    for i in xrange(1,int(number)):
+        #
+        # image Area
+        #
+        imageCollapsibleButton = slicer.qMRMLCollapsibleButton()
+        imageCollapsibleButton.text = "Image set " + str(i)
+        self.layout.addWidget(imageCollapsibleButton)
+
+        # Layout within the dummy collapsible button
+        parametersFormLayout = qt.QFormLayout(imageCollapsibleButton)
+        
+        #
+        # image2 volume selector
+        #
+        self.imageSelector = slicer.qMRMLNodeComboBox()
+        self.imageSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
+        self.imageSelector.selectNodeUponCreation = True
+        self.imageSelector.addEnabled = False
+        self.imageSelector.removeEnabled = False
+        self.imageSelector.noneEnabled = False
+        self.imageSelector.showHidden = False
+        self.imageSelector.showChildNodeTypes = False
+        self.imageSelector.setMRMLScene( slicer.mrmlScene )
+        self.imageSelector.setToolTip( "Pick the second image." )
+        parametersFormLayout.addRow("Image: ", self.imageSelector)
+        
+        #
+        # transform selector
+        #
+        self.transformSelector = slicer.qMRMLNodeComboBox()
+        self.transformSelector.nodeTypes = ["vtkMRMLTransformNode","vtkMRMLLinearTransformNode"]
+        self.transformSelector.selectNodeUponCreation = True
+        self.transformSelector.addEnabled = False
+        self.transformSelector.removeEnabled = False
+        self.transformSelector.noneEnabled = False
+        self.transformSelector.showHidden = False
+        self.transformSelector.showChildNodeTypes = False
+        self.transformSelector.setMRMLScene( slicer.mrmlScene )
+        self.transformSelector.setToolTip( "Pick the transform from the image to the baseline image." )
+        parametersFormLayout.addRow("Transform: ", self.transformSelector)
+        
+        # store node information
+        self.imageNodes.append(self.imageSelector)
+        self.transformNodes.append(self.transformSelector)
     
   def cleanup(self):
     pass
@@ -236,23 +236,24 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.filename = qt.QFileDialog.getSaveFileName()
  
   def onSelectResample(self):
-    self.resampleLabelMapsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
+    self.resampleLabelMapsButton.enabled
     
   def onSelectCalculate(self):
-    self.calculateStatsButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
+    self.calculateStatsButton.enabled
     
   def onShowLayout(self):
-    self.showLayoutButton.enabled = self.roiSelector.currentNode() and self.baselineSelector.currentNode()
+    self.showLayoutButton.enabled
 
   def onresampleLabelMapsButton(self):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
     images = []
-    for i in xrange(0,self.numberOfImages-1):
+    images.append(self.baselineSelector.currentNode())
+    for i in xrange(0,int(self.numberSelector.text)-1):
         images.append(self.imageNodes[i].currentNode())
     # gather transforms into list
     transforms = []
-    for i in xrange(0,self.numberOfImages-1):
+    for i in xrange(0,int(self.numberSelector.text)-1):
         transforms.append(self.transformNodes[i].currentNode())
     # send to logic
     logic.resampleLabelMaps(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
@@ -261,7 +262,8 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
     images = []
-    for i in xrange(0,self.numberOfImages-1):
+    images.append(self.baselineSelector.currentNode())
+    for i in xrange(0,int(self.numberSelector.text)-1):
         images.append(self.imageNodes[i].currentNode())    # send to logic
     logic.calculateStatistics(images, self.filename)
     
@@ -269,11 +271,12 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
     images = []
-    for i in xrange(0,self.numberOfImages-1):
+    images.append(self.baselineSelector.currentNode())
+    for i in xrange(0,int(self.numberSelector.text)-1):
         images.append(self.imageNodes[i].currentNode())
     # gather transforms into list
     transforms = []
-    for i in xrange(0,self.numberOfImages-1):
+    for i in xrange(0,int(self.numberSelector.text)-1):
         transforms.append(self.transformNodes[i].currentNode())
     # send to logic
     logic.showLayout(images, transforms)
@@ -390,10 +393,10 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
        
   def resampleLabelMaps(self, roi, baseline, images, transforms):
     # perform actions on each image/transform pair
-    for x in xrange(0, len(images)):
+    for x in xrange(1, len(images)):
         if( images[x] != None ):
             # apply transforms and create new rois/image
-            roiNew = self.applyTransform( images[x], roi, transforms[x] )
+            roiNew = self.applyTransform( images[x], roi, transforms[x-1] )
  
     return True
     
@@ -406,6 +409,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     results['Labels'] = []
   
     # iterate through all the images
+    print(images)
     for x in range(0,len(images)):
         if( images[x] != None ):
             # pull roi from slicer
@@ -431,8 +435,9 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
                 for label in xrange(min(results['Labels']),max(results['Labels'])+1):
                     data = []
                     for header in keys:
-                        data.append(results[im,label,header])
-                    file.write(', '.join(data))
+                        #data.append(results[im,label,header])
+                        file.write(str(results[im,label,header]))
+                        file.write(',')
                     file.write('\n')       
     
     return True
@@ -440,17 +445,17 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
   def showLayout(self, images, transforms):
  
     # apply and observe transforms on appropriate images
-    for x in range(0, len(images)):
+    for x in range(1, len(images)):
         if( images[x] != None ):
             # inverse transform (undo what was done previously)
-            transforms[x].Inverse()
+            transforms[x-1].Inverse()
             
             # observe transform with image
-            images[x].SetAndObserveTransformNodeID( transforms[x].GetID() )
+            images[x].SetAndObserveTransformNodeID( transforms[x-1].GetID() )
             
             # observe transform with roi
             roi = slicer.util.getNode(images[x].GetName() + '-label')
-            roi.SetAndObserveTransformNodeID( transforms[x].GetID() )
+            roi.SetAndObserveTransformNodeID( transforms[x-1].GetID() )
 
     return
 
