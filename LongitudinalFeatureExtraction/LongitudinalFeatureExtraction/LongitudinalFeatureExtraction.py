@@ -45,6 +45,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # define lists to store images and transforms
     self.imageNodes = []
     self.transformNodes = []
+    self.layouts = []
     self.filename = None
     
     # 
@@ -90,7 +91,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(actionsCollapsibleButton)
-	
+    
     #
     # Resample rois Button
     #
@@ -151,7 +152,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(baselineCollapsibleButton)
-	
+    
     #
     # image (original) volume selector
     #
@@ -183,6 +184,10 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     parametersFormLayout.addRow("Region of interest (label map) ", self.roiSelector)
     
   def numberchanged(self,number):
+    # remove all previous nodes
+    for n in xrange(0, len(self.layouts)):
+        self.layouts[n].delete()
+  
     for i in xrange(1,int(number)):
         #
         # image Area
@@ -190,9 +195,13 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
         imageCollapsibleButton = slicer.qMRMLCollapsibleButton()
         imageCollapsibleButton.text = "Image set " + str(i)
         self.layout.addWidget(imageCollapsibleButton)
+        
+        self.layouts.append(imageCollapsibleButton)
 
         # Layout within the dummy collapsible button
-        parametersFormLayout = qt.QFormLayout(imageCollapsibleButton)
+        tempLayout = qt.QFormLayout(imageCollapsibleButton)
+        
+        self.layouts.append(tempLayout)
         
         #
         # image2 volume selector
@@ -207,7 +216,9 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
         self.imageSelector.showChildNodeTypes = False
         self.imageSelector.setMRMLScene( slicer.mrmlScene )
         self.imageSelector.setToolTip( "Pick the second image." )
-        parametersFormLayout.addRow("Image: ", self.imageSelector)
+        tempLayout.addRow("Image: ", self.imageSelector)
+        
+        self.layouts.append(self.imageSelector)
         
         #
         # transform selector
@@ -222,11 +233,14 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
         self.transformSelector.showChildNodeTypes = False
         self.transformSelector.setMRMLScene( slicer.mrmlScene )
         self.transformSelector.setToolTip( "Pick the transform from the image to the baseline image." )
-        parametersFormLayout.addRow("Transform: ", self.transformSelector)
+        tempLayout.addRow("Transform: ", self.transformSelector)
         
+        self.layouts.append(self.transformSelector)
+
         # store node information
         self.imageNodes.append(self.imageSelector)
         self.transformNodes.append(self.transformSelector)
+        self.layouts.append(tempLayout)
     
   def cleanup(self):
     pass
