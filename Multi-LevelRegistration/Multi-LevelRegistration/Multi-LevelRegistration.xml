@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <executable>
-  <category>Examples</category>
+  <category>Registration</category>
   <title>Multi-LevelRegistration</title>
   <description>Registration between two datasets with varying amounts of image information. Registration begins at the largest defined region of interest. Upon completion, images are cropped according to the next defined region of interest and registered again. This process is repeated for the number of defined regions of interest. This methodology was specfically developed for the application of longitudinal datasets showing disease change over time.</description>
   <version>0.0.1</version>
