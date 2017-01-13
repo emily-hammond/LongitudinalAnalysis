@@ -2,7 +2,7 @@
 <executable>
   <category>Examples</category>
   <title>Multi-LevelRegistration</title>
-  <description><![CDATA[This is a CLI module that can be bundled in an extension]]></description>
+  <description>Registration between two datasets with varying amounts of image information. Registration begins at the largest defined region of interest. Upon completion, images are cropped according to the next defined region of interest and registered again. This process is repeated for the number of defined regions of interest. This methodology was specfically developed for the application of longitudinal datasets showing disease change over time.</description>
   <version>0.0.1</version>
   <documentation-url>http://www.example.com/Slicer/Modules/Multi-LevelRegistration</documentation-url>
   <license>Slicer</license>
