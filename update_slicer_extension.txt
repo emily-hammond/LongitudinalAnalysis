@@ -1,0 +1,74 @@
+Submit Slicer Extension
+
+ 1) Develop your extension
+   
+    CLI module is developed with ITK and integrated into Slicer using the Slicer Execution Module
+	Scripted uses Python wrapping
+	
+ 2) Request access to edit the Slicer Wiki Pages (https://www.slicer.org/wiki/Main_Page)
+ 
+ 3) After request is granted, create new Wiki page under Extensions by category/name
+    * [[Documentation/Nightly/Extensions/ModuleName|Module Name]]
+	
+ 4) Copy template wiki page and fill in appropriate information to illustrate how the extension works
+    - Create logo for extention
+	- Fill in sections
+ 
+ 5) Move extension to a new repository solely containing the extension (if not already done)
+ 
+ 6) Update CMakeLists.txt file to include appropriate information (including logos and urls)
+ 
+ 7) Follow the instructions below to submit extension to ExtensionsIndex
+
+Update Slicer Extension
+
+also see: http://wiki.slicer.org/slicerWiki/index.php/Documentation/Nightly/Developers/Tutorials/Contribute_Extension_Description_File#Requesting_an_extension_update
+
+An extension that is meant for the Slicer Extension Manager must include a *.s4ext file on the Slicer Exensions Index. This file contains certain information about the extension, mainly the source code repository, revision number, and contributors. Pushing updates to your source code repository does not automatically update the Extensions Index. Some steps must be taken to ensure the latest changes can be seen in the Extension Manager. Here is the full description on the Slicer wiki, but below is my summary:
+
+ 1) Commit all your changes to your Slicer extension and push them to your public repository.
+
+    git commit -m "ENH: made some changes"
+    git push origin master
+
+ 2) Change to the directory of your ExtensionsIndex fork. For example
+
+    cd ~/software/SlicerExtensionsIndex
+
+ 3) Make sure to update your fork.
+
+    git remote add upstream git://github.com/Slicer/ExtensionsIndex
+    git fetch upstream
+    git checkout master
+    git reset --hard upstream/master
+    git push origin master
+
+ 4) Create the update branch (or align the update branch so it is the same as master).
+
+    git checkout -B update-YourExtensionName master
+
+ 5) Now is the time to update the *.s4ext file. It will be found in the build directory of your extension. Updating the scmrevision number can be done manually, but the *.s4ext file can also be updated automatically by running cmake or ccmake in the build directory. Here is an example of what a change to the *.s4ext file will look like:
+
+    #
+    # First token of each non-comment line is the keyword and the rest of the line
+    # (including spaces) is the value.
+    # - the value can be blank
+    #
+    # This is source code manager (i.e. svn)
+    scm git
+    scmurl https://github.com/QIICR/Slicer-PETDICOMExtension.git
+    -scmrevision 5dd96135                                             # old revision
+    +scmrevision fce4450                                              # new revision
+
+ 6) Place a copy of the *.s4ext file in your SlicerExtensionsIndex folder.
+ 7) Add, commit, and push your changes to your update branch.
+
+    cd ~/software/SlicerExtensionsIndex
+    git add YourExtensionName.s4ext
+    git commit -m "update YourExtensionName"
+    git push origin update-YourExtensionName
+
+ 8) Your ExtensionsIndex fork is now one commit ahead of the original Slicer/ExtensionsIndex. Because we do not have permission to push to the original, a pull request is required. On GitHub, navigate to your ExtensionsIndex fork. Select the update-YourExtensionName branch from the branch dropdown menu.
+ 9) A message should appear that states your branch can be automatically merged with Slicer/ExtensionsIndex. Select the “Pull Request” button and add comments to the pull request if needed.
+
+
