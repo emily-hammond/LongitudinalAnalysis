@@ -1,0 +1,59 @@
+<noinclude>{{documentation/versioncheck}}</noinclude>
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-header}}
+<!-- ---------------------------- -->
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|Introduction and Acknowledgements}}
+{{documentation/{{documentation/version}}/module-introduction-start|{{documentation/modulename}}}}
+{{documentation/{{documentation/version}}/module-introduction-row}}
+Author: Emily Hammond (University of Iowa), Jessica Sieren (University of Iowa)<br>
+Contact: <email>emily-hammond@uiowa.edu</email><br>
+{{documentation/{{documentation/version}}/module-introduction-row}}
+{{documentation/{{documentation/version}}/module-introduction-logo-gallery
+|{{collaborator|logo|uiowa}}|{{collaborator|longname|uiowa}} <- Replace this logo with yours
+}}
+{{documentation/{{documentation/version}}/module-introduction-end}}
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|Module Description}}
+N/A
+<!--
+Here comes a description what the module is good for. Explain briefly how it works and point to the [[documentation/{{documentation/version}}/Modules/{{documentation/modulename}}#References|references]] giving more details on the algorithm.
+
+If you are documenting a CLI, the description should be extracted from the corresponding XML description. This could be done automatically using the following wiki template:<pre>{{documentation/{{documentation/version}}/module-description}}
+
+{{documentation/{{documentation/version}}/module-description}}
+-->
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|Use Cases}}
+N/A
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|Tutorials}}
+N/A
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|Panels and their use}}
+N/A
+<!--
+{{documentation/{{documentation/version}}/module-parametersdescription}}
+-->
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|Similar Modules}}
+N/A
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|References}}
+N/A
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-section|Information for Developers}}
+{{documentation/{{documentation/version}}/module-developerinfo}}
+
+
+<!-- ---------------------------- -->
+{{documentation/{{documentation/version}}/module-footer}}
+<!-- ---------------------------- -->
