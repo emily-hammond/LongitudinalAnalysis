@@ -6,9 +6,9 @@
  * label masks and a transform
  */
 
-#include "C:\Users\ehammond\Documents\ITKprojects\RegistrationCode\SourceDirectory\MultiLevelRegistrationSuper\ReadWriteFunctions.hxx"
-#include "C:\Users\ehammond\Documents\ITKprojects\RegistrationCode\SourceDirectory\MultiLevelRegistrationSuper\itkValidationFilter.h"
-#include "C:\Users\ehammond\Documents\ITKprojects\RegistrationCode\SourceDirectory\MultiLevelRegistrationSuper\itkManageTransformsFilter.h"
+#include "..\..\ReadWriteFunctions.hxx"
+#include "..\..\itkValidationFilter.h"
+#include "..\..\itkManageTransformsFilter.h"
 #include <time.h>
 
 // ***********************Main function********************************
