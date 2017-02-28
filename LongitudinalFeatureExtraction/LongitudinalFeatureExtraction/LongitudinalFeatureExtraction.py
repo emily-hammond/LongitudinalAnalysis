@@ -6,6 +6,7 @@ import logging
 import SimpleITK as sitk
 import sitkUtils
 import time
+import numpy as np
 
 #
 # LongitudinalFeatureExtraction
@@ -45,6 +46,7 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     # define lists to store images and transforms
     self.imageNodes = []
     self.transformNodes = []
+    self.roiNodes = []
     self.layouts = []
     self.filename = None
     
@@ -127,6 +129,40 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     self.onSelectCalculate()
     
     #
+    # Resample into baseline space
+    #
+    self.baselineSpaceButton = qt.QPushButton("Baseline space")
+    self.baselineSpaceButton.toolTip = "Resample rois into baseline image space."
+    self.baselineSpaceButton.enabled = True
+    parametersFormLayout.addRow(self.baselineSpaceButton)
+
+    # connections
+    self.baselineSpaceButton.connect('clicked(bool)', self.onbaselineSpaceButton)
+
+    # Add vertical spacer
+    self.layout.addStretch(1)
+
+    # Refresh Apply button state
+    self.onBaselineSpace()
+    
+    #
+    # Find extent button
+    #
+    self.findExtentButton = qt.QPushButton("Find extent")
+    self.findExtentButton.toolTip = "Find extent of the label mask."
+    self.findExtentButton.enabled = True
+    parametersFormLayout.addRow(self.findExtentButton)
+
+    # connections
+    self.findExtentButton.connect('clicked(bool)', self.onfindExtentButton)
+
+    # Add vertical spacer
+    self.layout.addStretch(1)
+
+    # Refresh Apply button state
+    self.onFindExtent()
+    
+    #
     # Show layout Button
     #
     self.showLayoutButton = qt.QPushButton("Registered images layout")
@@ -171,17 +207,17 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     #
     # ROI volume selector
     #
-    self.roiSelector = slicer.qMRMLNodeComboBox()
-    self.roiSelector.nodeTypes = ["vtkMRMLLabelMapVolumeNode"]
-    self.roiSelector.selectNodeUponCreation = True
-    self.roiSelector.addEnabled = False
-    self.roiSelector.removeEnabled = False
-    self.roiSelector.noneEnabled = False
-    self.roiSelector.showHidden = False
-    self.roiSelector.showChildNodeTypes = False
-    self.roiSelector.setMRMLScene( slicer.mrmlScene )
-    self.roiSelector.setToolTip( "Pick the region of interest." )
-    parametersFormLayout.addRow("Region of interest (label map) ", self.roiSelector)
+    self.baselineRoiSelector = slicer.qMRMLNodeComboBox()
+    self.baselineRoiSelector.nodeTypes = ["vtkMRMLLabelMapVolumeNode"]
+    self.baselineRoiSelector.selectNodeUponCreation = True
+    self.baselineRoiSelector.addEnabled = False
+    self.baselineRoiSelector.removeEnabled = False
+    self.baselineRoiSelector.noneEnabled = False
+    self.baselineRoiSelector.showHidden = False
+    self.baselineRoiSelector.showChildNodeTypes = False
+    self.baselineRoiSelector.setMRMLScene( slicer.mrmlScene )
+    self.baselineRoiSelector.setToolTip( "Pick the region of interest." )
+    parametersFormLayout.addRow("Region of interest (label map) ", self.baselineRoiSelector)
     
   def numberchanged(self,number):
     # remove all previous nodes
@@ -236,10 +272,28 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
         tempLayout.addRow("Transform: ", self.transformSelector)
         
         self.layouts.append(self.transformSelector)
+        
+        #
+        # ROI volume selector
+        #
+        self.roiSelector = slicer.qMRMLNodeComboBox()
+        self.roiSelector.nodeTypes = ["vtkMRMLLabelMapVolumeNode"]
+        self.roiSelector.selectNodeUponCreation = True
+        self.roiSelector.addEnabled = False
+        self.roiSelector.removeEnabled = False
+        self.roiSelector.noneEnabled = True
+        self.roiSelector.showHidden = False
+        self.roiSelector.showChildNodeTypes = False
+        self.roiSelector.setMRMLScene( slicer.mrmlScene )
+        self.roiSelector.setToolTip( "Corresponding region of interest." )
+        tempLayout.addRow("Region of interest (label map) ", self.roiSelector)
+        
+        self.layouts.append(self.transformSelector)
 
         # store node information
         self.imageNodes.append(self.imageSelector)
         self.transformNodes.append(self.transformSelector)
+        self.roiNodes.append(self.roiSelector)
         self.layouts.append(tempLayout)
     
   def cleanup(self):
@@ -248,12 +302,19 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
   def onFileDialog(self):
     self.fileDialogButton.enabled = True
     self.filename = qt.QFileDialog.getSaveFileName()
+    open(self.filename,'w')
  
   def onSelectResample(self):
     self.resampleLabelMapsButton.enabled
     
   def onSelectCalculate(self):
     self.calculateStatsButton.enabled
+    
+  def onBaselineSpace(self):
+    self.baselineSpaceButton.enabled
+    
+  def onFindExtent(self):
+    self.findExtentButton.enabled
     
   def onShowLayout(self):
     self.showLayoutButton.enabled
@@ -270,16 +331,39 @@ class LongitudinalFeatureExtractionWidget(ScriptedLoadableModuleWidget):
     for i in xrange(0,int(self.numberSelector.text)-1):
         transforms.append(self.transformNodes[i].currentNode())
     # send to logic
-    logic.resampleLabelMaps(self.roiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
+    logic.resampleLabelMaps(self.baselineRoiSelector.currentNode(), self.baselineSelector.currentNode(), images, transforms)
 
   def oncalculateStatsButton(self):
     logic = LongitudinalFeatureExtractionLogic()
     # gather images into list
     images = []
+    rois = []
     images.append(self.baselineSelector.currentNode())
+    rois.append(self.baselineRoiSelector.currentNode())
     for i in xrange(0,int(self.numberSelector.text)-1):
         images.append(self.imageNodes[i].currentNode())    # send to logic
-    logic.calculateStatistics(images, self.filename)
+        rois.append(self.roiNodes[i].currentNode())
+    logic.calculateStatistics(images, rois, self.filename)
+    
+  def onbaselineSpaceButton(self):
+    logic = LongitudinalFeatureExtractionLogic()
+    rois = []
+    rois.append(self.baselineRoiSelector.currentNode())
+    for i in xrange(0,int(self.numberSelector.text)-1):
+        rois.append(self.roiNodes[i].currentNode())
+    # gather transforms into list
+    transforms = []
+    for i in xrange(0,int(self.numberSelector.text)-1):
+        transforms.append(self.transformNodes[i].currentNode())
+    logic.baselineSpace(self.baselineSelector.currentNode(), rois, transforms)
+    
+  def onfindExtentButton(self):
+    logic = LongitudinalFeatureExtractionLogic()
+    rois = []
+    rois.append(self.baselineRoiSelector.currentNode())
+    for i in xrange(0,int(self.numberSelector.text)-1):
+        rois.append(self.roiNodes[i].currentNode())
+    logic.findExtent(rois, self.filename)
     
   def onshowLayoutButton(self):
     logic = LongitudinalFeatureExtractionLogic()
@@ -333,7 +417,6 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     roiNew.SetName( image.GetName() + '-label')
     slicer.mrmlScene.AddNode( roiNew )
     
-    # take inverse of transform
     transform.Inverse()
     
     # resample roi using inverse transform
@@ -343,7 +426,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     parameters["outputVolume"] = roiNew
     parameters["pixelType"] = "int"
     parameters["warpTransform"] = transform
-    parameters["interpolationMode"] = "Linear"
+    parameters["interpolationMode"] = "NearestNeighbor"
     # call module
     cliNode = None
     cliNode = slicer.cli.run( slicer.modules.brainsresample, cliNode, parameters )
@@ -411,11 +494,13 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
         if( images[x] != None ):
             # apply transforms and create new rois/image
             roiNew = self.applyTransform( images[x], roi, transforms[x-1] )
+        else:
+            print("Image not selected")
  
     return True
     
   # redo this function similar to how it is done with the labelstatistics module
-  def calculateStatistics(self, images, filename):
+  def calculateStatistics(self, images, rois, filename):
     # initialize results list
     keys = ["Image","Index", "Count", "Volume mm^3", "Volume cc", "Min", "Max", "Mean", "StdDev"]
     results = {}
@@ -424,11 +509,17 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
   
     # iterate through all the images
     print(images)
+    print(rois)
     for x in range(0,len(images)):
         if( images[x] != None ):
             # pull roi from slicer
-            roi = slicer.util.getNode(images[x].GetName() + '-label')
+            if( rois[x] != None ):
+                roi = slicer.util.getNode(rois[x].GetName())
+            else:
+                roi = slicer.util.getNode(images[x].GetName() + '-label')
             maxLabel = self.getLabelStats(images[x], roi, results)
+        else:
+            print("Image not selected")
             
     # print out results in a nice table
     print(keys)
@@ -442,7 +533,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     # write results to file if a csv file is given
     print(filename)
     if( filename != None ):
-        with open(filename,'w') as file:
+        with open(filename,'a') as file:
             file.write(', '.join(keys))
             file.write('\n')
             for im in results['Image']:
@@ -452,7 +543,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
                         #data.append(results[im,label,header])
                         file.write(str(results[im,label,header]))
                         file.write(',')
-                    file.write('\n')       
+                    file.write('\n')
     
     return True
     
@@ -461,7 +552,7 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
     # apply and observe transforms on appropriate images
     for x in range(1, len(images)):
         if( images[x] != None ):
-            # inverse transform (undo what was done previously)
+
             transforms[x-1].Inverse()
             
             # observe transform with image
@@ -472,6 +563,81 @@ class LongitudinalFeatureExtractionLogic(ScriptedLoadableModuleLogic):
             roi.SetAndObserveTransformNodeID( transforms[x-1].GetID() )
 
     return
+    
+  def findExtent(self, rois, filename):
+  
+    # initialize results list
+    keys = ["Image","Xmin", "Xmax", "Ymin", "Ymax", "Zmin", "Zmax","-Xgrowth","+Xgrowth","-Ygrowth","+Ygrowth","-Zgrowth","+Zgrowth"]
+    results = []
+    
+    spacing = rois[0].GetSpacing()
+    roi = slicer.util.array(rois[0].GetID())
+    
+    z = np.any(roi, axis=(1,2))
+    y = np.any(roi, axis=(0,2))
+    x = np.any(roi, axis=(0,1))
+    
+    bzmax,bzmin = np.where(z)[0][[0,-1]]
+    bymax,bymin = np.where(y)[0][[0,-1]]
+    bxmin,bxmax = np.where(x)[0][[0,-1]]
+    
+    # enter results into list
+    temp = [rois[0].GetName(),bxmin,bxmax,bymin,bymax,bzmin,bzmax,0,0,0,0,0,0]
+    results.append(temp)
+    
+    # find extent in all the rois and print
+    for x in range(1, len(rois)):
+        
+        roiNode = slicer.util.getNode(rois[x].GetName() + '_baselineSpace')
+        roi = slicer.util.array(roiNode.GetID())
+    
+        z = np.any(roi, axis=(1,2))
+        y = np.any(roi, axis=(0,2))
+        x = np.any(roi, axis=(0,1))
+        
+        zmax,zmin = np.where(z)[0][[0,-1]]
+        ymax,ymin = np.where(y)[0][[0,-1]]
+        xmin,xmax = np.where(x)[0][[0,-1]]
+        
+        # enter results into list
+        temp = [roiNode.GetName(),xmin,xmax,ymin,ymax,zmin,zmax,spacing[0]*(xmin-bxmin),spacing[0]*(xmax-bxmax),spacing[1]*(ymin-bymin),spacing[1]*(ymax-bymax),spacing[2]*(zmin-bzmin),spacing[2]*(zmax-bzmax)]
+        results.append(temp)
+        
+    print(results)
+
+    # write results to file if a csv file is given
+    print(filename)
+    if( filename != None ):
+        with open(filename,'a') as file:
+            file.write('\n\n')
+            file.write(', '.join(keys))
+            file.write('\n')
+            file.writelines(["%s\n" % item for item in results])
+    return
+    
+  def baselineSpace(self, baselineImage, rois, transforms):
+  
+    for x in range(1, len(rois)):
+        if( rois[x].GetName() != None ):
+            # create new volumes
+            roiNew = slicer.vtkMRMLLabelMapVolumeNode()
+            roiNew.SetName(rois[x].GetName() + '_baselineSpace')
+            slicer.mrmlScene.AddNode( roiNew )
+            
+            # resample roi using inverse transform
+            parameters = {}
+            parameters["inputVolume"] = rois[x]
+            parameters["referenceVolume"] = baselineImage
+            parameters["outputVolume"] = roiNew
+            parameters["pixelType"] = "int"
+            parameters["warpTransform"] = transforms[x-1]
+            parameters["interpolationMode"] = "NearestNeighbor"
+            # call module
+            cliNode = None
+            cliNode = slicer.cli.run( slicer.modules.brainsresample, cliNode, parameters )
+            print(cliNode.AddObserver('ModifiedEvent', self.printStatus))
+    
+    return roiNew
 
 class LongitudinalFeatureExtractionTest(ScriptedLoadableModuleTest):
   """
