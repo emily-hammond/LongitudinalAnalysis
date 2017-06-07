@@ -1,0 +1,88 @@
+1
+                           **** USER MANUAL ****                             
+
+ IMAGES: 
+  fixedImageFilename: filename for the fixed image including path | required
+  movingImageFilename: filename for the moving image including path | required
+  finalTransformFilename: filename for the final transform (output) | required
+
+ MULTI-LEVEL: 
+  [numberOfLevels]: number of desired levels for registration | default = 0
+          = 0 | initialization only 
+          = 1 | whole image registration 
+          = 2 | ROI used to isolate a specific region for registration 
+                (must be smaller than the whole image) 
+          = 3 | an additional ROI used to pair down the process even 
+                further (must be within the 2nd level ROI) 
+  [level1ROIFilename]: path to the ROI used in the first level
+  [level2ROIFilename]: path to the ROI used in the second level | required 
+                       if numberOfLevels >= 2
+  [level3ROIFilename]: path to the ROI used in the third level | required 
+                       if numberOfLevels = 3
+
+ PREPROCESSING (only applied to moving image currently): 
+  [upperThreshold]: upper threshold value for thresholding the moving image
+  [lowerThreshold]: lower threshold value for thresholding the moving image 
+  [sigma]: variance of the gaussian kernel used for smoothing the moving image 
+
+ INITIALIZATION: 
+  [fixedImageInitialTransform]: inital transform applied to the fixed image
+                                prior to registration | default = NULL
+  [referenceImage]: image used as a reference when applying the fixed image
+                    initial transform | required if fixedImageInitialTransform
+  [manualInitialTransform]: initial transform filename as a manual input
+                            | default = NULL
+  [centerOfGeometry]: perform center of geomentry initialization | default = 1
+          = 0 | YES 
+          = 1 | NO 
+  [iterativeAlignment]: iterative over 125 locations for best alignment | default = 0
+          = 0 | YES 
+          = 1 | NO 
+  [transX]: perform translation initialization in the x axis | default = 0
+          = 0 | YES 
+          = 1 | NO 
+  [transY]: perform translation initialization in the y axis | default = 0
+          = 0 | YES 
+          = 1 | NO 
+  [transZ]: perform translation initialization in the z axis | default = 0
+          = 0 | YES 
+          = 1 | NO 
+  [rotX]: perform rotational initialization around the x axis | default = 0
+          = 0 | YES 
+          = 1 | NO 
+  [rotY]: perform translation initialization around the y axis | default = 0
+          = 0 | YES 
+          = 1 | NO 
+  [rotZ]: perform translation initialization around the z axis | default = 0
+          = 0 | YES 
+          = 1 | NO 
+
+ REGISTRATION PARAMETERS: 
+  [parameterRelaxation]: divisor to reduced parameters at each level | default = 2
+  [rotationScale]: expected amount of rotation to occur | default = 0.001
+  [translationScale]: expected amount of translation to occur | default = 10
+  [scalingScale]: expected amount of scaling to occur | default = 0.001
+  [numberOfIterations]: number of iterations allowed at each level of 
+                        registration | default = 500
+  [maximumStepLength]: maximum step length allowed at each level | default = 1
+  [minimumStepLength]: minimum step length allowed at each level | default = 0.001
+  [relaxationFactor]: amount by which the step length decreases during 
+                      optimization | default = 0.5
+  [gradientMagnitudeTolerance]: the minimum gradient magnitude 
+                                allowed | default = 0.001
+
+ VALIDATION PARAMETERS: 
+  [fixedImageMaskFilename]: path to the label map corresponding to 
+                               the fixed image for validation | required
+  [movingImageMaskFilename]: path to the label map corresponding to 
+                                the moving image for validation | required
+ SPECIAL PARAMETERS: 
+  [observe]: print out the monitoring of the registration process at each 
+             level | default = 0
+          = 0 | YES 
+          = 1 | NO 
+  [debugTransforms]: print out transforms at each level and every 50 iterations
+                     | default = 0
+  [debugImages]: print out results at start and end of each level | default = 0
+  [debugDirectory]: path to folder that will contain all the debug information
+

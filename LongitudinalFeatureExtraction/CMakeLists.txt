@@ -4,7 +4,7 @@ project(LongitudinalFeatureExtraction)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "http://slicer.org/slicerWiki/index.php/Documentation/Nightly/Extensions/LongitudinalFeatureExtraction")
+set(EXTENSION_HOMEPAGE "http://www.google.com")
 set(EXTENSION_CATEGORY "Examples")
 set(EXTENSION_CONTRIBUTORS "Emily Hammond (The University of Iowa)")
 set(EXTENSION_DESCRIPTION "This is an example of a simple extension")
